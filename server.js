@@ -70,8 +70,8 @@ io.on("connection", (socket) => {
       offererUserName: userName,
       offer: newOffer,
       offerIceCandidates: [],
-      answer: null,
       answererUserName: null,
+      answer: null,
       answererIceCandidates: [],
     });
     // console.log(newOffer.sdp.slice(50));
@@ -92,7 +92,7 @@ io.on("connection", (socket) => {
         offerInOffers.offerIceCandidates.push(iceCandidate);
       }
     }
-    console.log(offers);
+    // console.log(offers);
   });
   //----------------------------------------------------------//
 });
