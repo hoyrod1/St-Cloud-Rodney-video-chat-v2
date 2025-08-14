@@ -36,19 +36,12 @@ let peerConfiguration = {
 };
 //==========================================================================//
 
+// 1. FIRST STEP IN INITIATING A CALL
 //======================= BEGINNING OF call FUNCTION =======================//
 //when a client initiates a call
 const call = async (e) => {
   //------------------------------------------------------------------------//
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true,
-  });
-  //------------------------------------------------------------------------//
-
-  //------------------------------------------------------------------------//
-  localVideoEl.srcObject = stream;
-  localStream = stream;
+  await fetchUserMedia();
   //------------------------------------------------------------------------//
 
   //------------------------------------------------------------------------//
@@ -57,7 +50,7 @@ const call = async (e) => {
 
   //------------------------------------------------------------------------//
   try {
-    console.log("Creating offer...");
+    // console.log("Creating offer...");
     const offer = await peerConnection.createOffer();
     // console.log(offer);
     peerConnection.setLocalDescription(offer);
@@ -70,14 +63,53 @@ const call = async (e) => {
 };
 //======================== ENDING OF call FUNCTION =========================//
 
+// 2. SECOND STEP IN ANSWERING A CALL
 //=================== BEGINNING OF answerOffer FUNCTION ====================//
-const answerOffer = (offer) => {
-  console.log(offer);
+const answerOffer = async (offer) => {
+  //------------------------------------------------------------------------//
+  await fetchUserMedia();
+  //------------------------------------------------------------------------//
+
+  //------------------------------------------------------------------------//
+  await createPeerConnection(offer);
+  //------------------------------------------------------------------------//
+
+  //------------------------------------------------------------------------//
+  const answer = await peerConnection.createAnswer({});
+  //------------------------------------------------------------------------//
+  // console.log(offer);
+  // console.log(answer);
+  // CLIENT2 uses the "answer" as the setLocalDescription
+  peerConnection.setLocalDescription(answer);
 };
 //===================== ENDING OF answerOffer FUNCTION =====================//
 
+//================= BEGINNING OF fetchUserMedia FUNCTION ===================//
+const fetchUserMedia = () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      //--------------------------------------------------------------------//
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      //--------------------------------------------------------------------//
+
+      //--------------------------------------------------------------------//
+      localVideoEl.srcObject = stream;
+      localStream = stream;
+      //--------------------------------------------------------------------//
+      resolve();
+    } catch (error) {
+      console.log(error);
+      reject();
+    }
+  });
+};
+//=================== ENDING OF fetchUserMedia FUNCTION ====================//
+
 //=============== BEGINNING OF createPeerConnection FUNCTION ===============//
-const createPeerConnection = () => {
+const createPeerConnection = (offerObj) => {
   return new Promise(async (resolve, rejects) => {
     //----------------------------------------------------------------------//
     peerConnection = await new RTCPeerConnection(peerConfiguration);
@@ -96,6 +128,14 @@ const createPeerConnection = () => {
         });
       }
     });
+    //----------------------------------------------------------------------//
+    if (offerObj) {
+      // offerObj will not be set when called from the call() function
+      // offerObj will be set when called from answerOffer() function
+      peerConnection.setRemoteDescription(offerObj.offer);
+    }
+    //----------------------------------------------------------------------//
+
     //----------------------------------------------------------------------//
     resolve();
     //----------------------------------------------------------------------//
