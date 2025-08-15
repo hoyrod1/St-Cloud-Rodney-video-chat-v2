@@ -6,7 +6,7 @@ document.querySelector("#user-name").innerHTML = userName;
 //==========================================================================//
 // FIRST STEP: io.connect RUNS WHEN SOMEONE BROWSES TO THIS URL //
 // NEXT STEP: GO TO server.js TO io.on() //
-const socket = io.connect("https://localhost:7070/", {
+const socket = io.connect("https://192.168.1.208:7070/", {
   auth: {
     userName,
     passWord,
@@ -146,16 +146,24 @@ const createPeerConnection = (offerObj) => {
     //----------------------------------------------------------------------//
     peerConnection = await new RTCPeerConnection(peerConfiguration);
     //----------------------------------------------------------------------//
+
+    //----------------------------------------------------------------------//
+    remoteStream = new MediaStream();
+    remoteVideoEl.srcObject = remoteStream;
+    //----------------------------------------------------------------------//
+
+    //----------------------------------------------------------------------//
     localStream.getTracks().forEach((track) => {
       peerConnection.addTrack(track, localStream);
     });
     //----------------------------------------------------------------------//
 
     //----------------------------------------------------------------------//
-    peerConnection.addEventListener("signalingstatechange", (event) => {
-      console.log(event);
-      console.log(peerConnection.signalingState);
-    });
+    // THE SIGNALING STATE CHANGE OF THE "peerConnection"
+    // peerConnection.addEventListener("signalingstatechange", (event) => {
+    //   console.log(event);
+    //   console.log(peerConnection.signalingState);
+    // });
     //----------------------------------------------------------------------//
     peerConnection.addEventListener("icecandidate", (e) => {
       // console.log(e);
@@ -167,6 +175,21 @@ const createPeerConnection = (offerObj) => {
         });
       }
     });
+    //----------------------------------------------------------------------//
+
+    //----------------------------------------------------------------------//
+    peerConnection.addEventListener("track", (event) => {
+      console.log(`========== GOT A TRACK FROM THE OTHER PEER ==========`);
+      console.log(event);
+      event.streams[0].getTracks().forEach((track) => {
+        remoteStream.addTrack(track, remoteStream);
+        console.log(
+          `========== THE OTHER PEER'S VIDEO & AUDIO STREAM HAS BEEN ADDED ==========`
+        );
+      });
+    });
+    //----------------------------------------------------------------------//
+
     //----------------------------------------------------------------------//
     if (offerObj) {
       // offerObj will not be set when called from the call() function
@@ -184,6 +207,13 @@ const createPeerConnection = (offerObj) => {
   });
 };
 //================ ENDING OF createPeerConnection FUNCTION =================//
+
+//================ BEGINNING OF addNewIceCandidate FUNCTION ================//
+const addNewIceCandidate = (iceCandidate) => {
+  peerConnection.addIceCandidate(iceCandidate);
+  console.log(`========= Added Ice Candidate =========`);
+};
+//================= ENDING OF addNewIceCandidate FUNCTION ==================//
 
 //============= CACHE THE CALL BUTTON FROM THE index.html FILE =============//
 document.querySelector("#call").addEventListener("click", call);

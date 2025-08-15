@@ -17,8 +17,16 @@ socket.on("newOfferAwaiting", (offersWaiting) => {
 //=================================================================================//
 // when a answer has been emitted
 socket.on("answerResponse", (offerObj) => {
-  // console.log(offerObj);
+  console.log(offerObj);
   addAnswer(offerObj);
+});
+//=================================================================================//
+
+//=================================================================================//
+// receivedIceCandidateFromServer
+socket.on("receivedIceCandidateFromServer", (iceCandidate) => {
+  addNewIceCandidate(iceCandidate);
+  console.log(iceCandidate);
 });
 //=================================================================================//
 

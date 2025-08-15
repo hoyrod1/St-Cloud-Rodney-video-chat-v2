@@ -133,22 +133,46 @@ io.on("connection", (socket) => {
   //--------------------------------------------------------------------------//
   socket.on("sendIceCandidateToSignalingServer", (iceCandidateObj) => {
     // console.log(iceCandidateObj);
-    const { didIOffer, iceUsername, iceCandidate } = iceCandidateObj;
+    const { didIOffer, iceUserName, iceCandidate } = iceCandidateObj;
     // console.log(iceCandidate);
     if (didIOffer) {
       // IF ICE IS COMING FROM THE OFFERER SEND TO THE ANSWERER
-      const offerInOffers = offers.find((offer) => offer.userName === iceUsername);
+      const offerInOffers = offers.find((offer) => offer.offerUserName === iceUserName);
       if (offerInOffers) {
         offerInOffers.offerIceCandidates.push(iceCandidate);
         // 1. WHEN THE ANSWERER ANSWERS ALL THE EXISTING "iceCandidate" ARE SENT
         // 2. ANY CANDIDATES THAT COME IN AFTER THE OFFER HAS BEEN ANSWERED WILL BE PASSED THROUGH
         if (offerInOffers.answererUserName) {
           // PASS IT THROUGH TO THE OTHER SOCKETS
+          const socketToSendTo = connectedSockets.find(
+            (socket) => socket.userName === offerInOffers.answererUserName
+          );
+          if (socketToSendTo) {
+            socket
+              .to(socketToSendTo.socketId)
+              .emit("receivedIceCandidateFromServer", iceCandidate);
+          } else {
+            console.log(`Ice Candidate received but could not find "answerer"!`);
+          }
         }
       }
     } else {
+      // IF ICE IS COMING FROM THE OFFERER SEND TO THE ANSWERER
+      const offerInOffers = offers.find(
+        (offer) => offer.answererUserName === iceUserName
+      );
       // IF ICE IS COMING FROM THE ANSWERER SEND TO THE OFFERER
       // PASS IT THROUGH TO THE OTHER SOCKETS
+      const socketToSendTo = connectedSockets.find(
+        (socket) => socket.userName === offerInOffers.offererUserName
+      );
+      if (socketToSendTo) {
+        socket
+          .to(socketToSendTo.socketId)
+          .emit("receivedIceCandidateFromServer", iceCandidate);
+      } else {
+        console.log(`Ice Candidate received but could not find "offerer"!`);
+      }
     }
     // console.log(offers);
   });
