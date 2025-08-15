@@ -27,6 +27,7 @@ let didIOffer = false;
 //==========================================================================//
 
 //======= peerConfiguration IS A OBJECT CONTAINING THE STUN SERVERS ========//
+// THIS SETS THE "stun" SERVERS
 let peerConfiguration = {
   iceServers: [
     {
@@ -65,26 +66,56 @@ const call = async (e) => {
 
 // 2. SECOND STEP IN ANSWERING A CALL
 //=================== BEGINNING OF answerOffer FUNCTION ====================//
-const answerOffer = async (offer) => {
+const answerOffer = async (offerObj) => {
   //------------------------------------------------------------------------//
   await fetchUserMedia();
   //------------------------------------------------------------------------//
 
   //------------------------------------------------------------------------//
-  await createPeerConnection(offer);
+  await createPeerConnection(offerObj);
   //------------------------------------------------------------------------//
 
   //------------------------------------------------------------------------//
   const answer = await peerConnection.createAnswer({});
   //------------------------------------------------------------------------//
-  // console.log(offer);
-  // console.log(answer);
+
+  //------------------------------------------------------------------------//
   // CLIENT2 uses the "answer" as the setLocalDescription
-  peerConnection.setLocalDescription(answer);
+  await peerConnection.setLocalDescription(answer);
+  //------------------------------------------------------------------------//
+  // console.log(offerObj);
+  // console.log(answer);
+  // should have local-pranswer because client2 has set setLocalDescription on the "answer" (but it won't)
+  // console.log(peerConnection.signalingState);
+  //------------------------------------------------------------------------//
+  // Add/set "answer" to the offerObj so the server knows which "offer" this is related to
+  offerObj.answer = answer;
+  //------------------------------------------------------------------------//
+  // emit the "newAnswer" to the signaling server so it can emit back to CLIENT1
+  // and expect a reponse from the server with the already existing ICE candidates
+  const offerIceCandidates = await socket.emitWithAck("newAnswer", offerObj);
+  offerIceCandidates.forEach((candidate) => {
+    peerConnection.addIceCandidate(candidate);
+    console.log(`========= Added Ice Candidate =========`);
+  });
+  console.log(offerIceCandidates);
+  //------------------------------------------------------------------------//
 };
 //===================== ENDING OF answerOffer FUNCTION =====================//
 
+// 3. THIRD STEP IN OFFER/CALL AND ANSWER/RESPONSE WITH THE "offere" & "answerer"
+//=================== BEGINNING OF addAnswer FUNCTION ====================//
+const addAnswer = async (offerObj) => {
+  // "addAnswer" is called in the "socketListeners.js" file when "answerResponse" is emitted. //
+  // at this point the "offer" and "answer" has been exchanged/set
+  // CLIENT1 need to set the "setRemoteDescription"
+  await peerConnection.setRemoteDescription(offerObj.answer);
+  // console.log(peerConnection.signalingState);
+};
+//====================== ENDING OF addAnswer FUNCTION ======================//
+
 //================= BEGINNING OF fetchUserMedia FUNCTION ===================//
+//                THIS CREATES & SETS THE VIDEO & AUDIO TRACK               //
 const fetchUserMedia = () => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -109,6 +140,7 @@ const fetchUserMedia = () => {
 //=================== ENDING OF fetchUserMedia FUNCTION ====================//
 
 //=============== BEGINNING OF createPeerConnection FUNCTION ===============//
+//    INITIAL CREATION OF THE "RTCPeerConnection" WITH TH "stun" SERVERS    //
 const createPeerConnection = (offerObj) => {
   return new Promise(async (resolve, rejects) => {
     //----------------------------------------------------------------------//
@@ -116,6 +148,13 @@ const createPeerConnection = (offerObj) => {
     //----------------------------------------------------------------------//
     localStream.getTracks().forEach((track) => {
       peerConnection.addTrack(track, localStream);
+    });
+    //----------------------------------------------------------------------//
+
+    //----------------------------------------------------------------------//
+    peerConnection.addEventListener("signalingstatechange", (event) => {
+      console.log(event);
+      console.log(peerConnection.signalingState);
     });
     //----------------------------------------------------------------------//
     peerConnection.addEventListener("icecandidate", (e) => {
@@ -132,7 +171,10 @@ const createPeerConnection = (offerObj) => {
     if (offerObj) {
       // offerObj will not be set when called from the call() function
       // offerObj will be set when called from answerOffer() function
-      peerConnection.setRemoteDescription(offerObj.offer);
+      // console.log(peerConnection.signalingState); // stable
+      await peerConnection.setRemoteDescription(offerObj.offer);
+      // should be have remote offer because client2 has setRemoteDesc on the "offerObj"
+      // console.log(peerConnection.signalingState);
     }
     //----------------------------------------------------------------------//
 

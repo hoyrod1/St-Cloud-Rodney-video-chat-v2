@@ -1,14 +1,29 @@
+//=================================================================================//
 // Once connection has been made create button for all available offers //
 socket.on("availableOffers", (availOffers) => {
-  console.log(availOffers);
+  // console.log(availOffers);
   createOfferEls(availOffers);
 });
+//=================================================================================//
+
+//=================================================================================//
 // When a new connection has been made create button //
 socket.on("newOfferAwaiting", (offersWaiting) => {
-  console.log(offersWaiting);
+  // console.log(offersWaiting);
   createOfferEls(offersWaiting);
 });
+//=================================================================================//
 
+//=================================================================================//
+// when a answer has been emitted
+socket.on("answerResponse", (offerObj) => {
+  // console.log(offerObj);
+  addAnswer(offerObj);
+});
+//=================================================================================//
+
+//=================================================================================//
+// createOfferEls creates avaiable button elements depending on "offers available"
 function createOfferEls(offers) {
   const answerEl = document.querySelector("#answer");
 
@@ -20,3 +35,4 @@ function createOfferEls(offers) {
     answerEl.appendChild(newOfferDivEl);
   });
 }
+//=================================================================================//
